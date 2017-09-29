@@ -55,19 +55,20 @@ void Curve::drawCurve(Color curveColor, float curveThickness, int window)
 
 	}
 
-	Point prevPoint = controlPoints[0].position;
+	Point prevPoint = controlPoints[0].position; // Grabs the position of the first control point.
 	Point outputPoint;
 	float t;
-	bool check;
+	bool check; // Currently we do nothing with the return value. calculatePoint() returns a bool value, so we will likely need to use this later to error check.
 
 	for (int i = 0; i < window; i++) {
 
-		t = (i / (float)window);
-		check = calculatePoint(outputPoint, t);
-		DrawLib::drawLine(prevPoint, outputPoint, curveColor, curveThickness);
+		t = (i / (float)window); // This is incorrect right now. This step is meant to determine the times at which we calculate curve points.
+		check = calculatePoint(outputPoint, t); // Calculates the curve point at time t.
+		DrawLib::drawLine(prevPoint, outputPoint, curveColor, curveThickness); // Draws the curve between the previous point and output point just calculated.
 		prevPoint = outputPoint;
 	}
 
+	// Calculates and draws the final segment of the hermite curve.
 	check = calculatePoint(outputPoint, 1);
 	DrawLib::drawLine(prevPoint, outputPoint, curveColor, curveThickness);
 
@@ -79,11 +80,14 @@ void Curve::drawCurve(Color curveColor, float curveThickness, int window)
 void Curve::sortControlPoints()
 {
 
-	int length = controlPoints.size();
-
+	int length = controlPoints.size(); // Calculates the length of the controlPoints vector.
+	
+	// Create a copy of the control points vector. Also create a vector that holds the time attributes for the
+	// control points.
 	std::vector<CurvePoint> controlCopy;
 	std::vector<float> timeVector;
 
+	// Add the necessary values to the time vector and the copy of the control points vector.
 	for (int i = 0; i < length; i++) {
 
 		controlCopy.push_back(controlPoints[i]);
@@ -91,8 +95,11 @@ void Curve::sortControlPoints()
 
 	}
 
+	// Sort the time vector using the std library's sort function.
 	std::sort(timeVector.begin(), timeVector.end());
 
+	// For each value in the sorted time vector, find the corresponding control point using the control copy vector.
+	// Reorder the original control points vector accordingly.
 	for (int i = 0; i < length; i++) {
 
 		for (int j = 0; j < length; j++) {
@@ -163,9 +170,17 @@ bool Curve::findTimeInterval(unsigned int& nextPoint, float time)
 	
 	int length = controlPoints.size();
 
+	// Search the control points to find the time interval the current time lies between.
+	// The iterator i will be used to index through the control points. If the current time is greater than
+	// or equal to the time attribute of the control point at index i and less than the time attribute of the
+	// control point at index i + 1, then we are forming the curve between the
+	// control point at index i and the control point at index i + 1. So, we should set the
+	// value of nextPoint, which holds the index of the next control point to follow,
+	// equal to i + 1 and return true since this function returns a bool value.
+
 	for (int i = 0; i < length - 1; i++) {
 
-		if (controlPoints[i].time < time <= controlPoints[i + 1].time) {
+		if (controlPoints[i].time <= time < controlPoints[i + 1].time) {
 
 			nextPoint = i + 1;
 			return true;
@@ -183,17 +198,19 @@ bool Curve::findTimeInterval(unsigned int& nextPoint, float time)
 Point Curve::useHermiteCurve(const unsigned int nextPoint, const float time)
 {
 	Point newPosition;
-	float normalTime, intervalTime;
+	float normalTime, intervalTime; // Wasn't sure how to use these values.
 
 	// Calculate position at t = time on Hermite curve
 
 	int i = nextPoint - 1; // Index of the last control point.
 
+	// Determine the 2 control points we are interpolating between and their tangent vectors.
 	Point P0 = controlPoints[i].position;
 	Point P1 = controlPoints[i + 1].position;
 	Vector T0 = controlPoints[i].tangent;
 	Vector T1 = controlPoints[i + 1].tangent;
 
+	// Calculate the position of the new point using the Hermite Equation.
 	float f1 = 2 * pow(time, 3) - 3 * pow(time, 2) + 1;
 	float f2 = -2 * pow(time, 3) + 3 * (time, 2);
 	float f3 = pow(time, 3) - 2 * pow(time, 2) + time;
