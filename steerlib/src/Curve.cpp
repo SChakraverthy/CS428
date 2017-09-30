@@ -53,26 +53,20 @@ void Curve::drawCurve(Color curveColor, float curveThickness, int window)
 	int length = controlPoints.size();
 	int numSteps = (int)controlPoints[length - 1].time / window;
 
-	Point prevPoint = controlPoints[0].position; // Grabs the position of the first control point.
+	Point prevPoint = controlPoints[0].position;
 	Point outputPoint;
 	float t;
-	bool check; // Currently we do nothing with the return value. calculatePoint() returns a bool values, so we will likely need to use this later to error check.
+	bool check; // Currently we do nothing with the return value. Error check later.
 
 	for (int i = 1; i < numSteps; i++) {
-		
 		t = i * (float)window;
-		
-		/*Debugging Statements:
-		std::cout << "The time is: " << t << std::endl;
-		std::cout << std::endl;
-		*/
-
 		check = calculatePoint(outputPoint, t);
 		DrawLib::drawLine(prevPoint, outputPoint, curveColor, curveThickness);
 		prevPoint = outputPoint;
 	}
 
-	// Currently choosing to ignore the final segment until the rest of it works.
+	// Draws the final segment for the hermite curve.
+	DrawLib::drawLine(prevPoint, controlPoints[length - 1].position, curveColor, curveThickness);
 
 	return;
 #endif
@@ -81,12 +75,11 @@ void Curve::drawCurve(Color curveColor, float curveThickness, int window)
 // Sort controlPoints vector in ascending order: min-first
 void Curve::sortControlPoints()
 {
-	
+
 	int length = controlPoints.size();
 
 	// This function creates a time vector that holds the time attributes for the control points.
 	// Also creates a copy of the control points vector that will be used in sorting the control points.
-
 	std::vector<CurvePoint> controlCopy;
 	std::vector<float> timeVector;
 
@@ -97,16 +90,7 @@ void Curve::sortControlPoints()
 
 	}
 
-	/* Debugging statements
-	std::cout << "The control points vector before sorting is: " << std::endl;
-	for (int i = 0; i < length; i++) {
-
-	std::cout << controlPoints[i].position << std::endl ;
-
-	}
-	*/
-
-	// Sort the time vector
+	// Sorts the time vector.
 	std::sort(timeVector.begin(), timeVector.end());
 
 	// For each value in the sorted time vector, find the corresponding control point using the control copy vector.
@@ -125,16 +109,6 @@ void Curve::sortControlPoints()
 		}
 
 	}
-
-	/* Debugging statements
-	std::cout << "The control points vector after sorting is: " << std::endl;
-
-	for (int i = 0; i < length; i++) {
-
-	std::cout << controlPoints[i].position << std::endl;
-
-	}
-	*/
 
 	return;
 }
@@ -172,7 +146,8 @@ bool Curve::calculatePoint(Point& outputPoint, float time)
 // Check Roboustness
 bool Curve::checkRobust()
 {
-	// Check to make sure that there are at least 2 control points.
+
+	// Checks to make sure that there are at least 2 control points.
 	int length = controlPoints.size();
 
 	if (length < 2) {
@@ -187,24 +162,27 @@ bool Curve::checkRobust()
 // Find the current time interval (i.e. index of the next control point to follow according to current time)
 bool Curve::findTimeInterval(unsigned int& nextPoint, float time)
 {
-	
+
 	// Search the control points to find the time interval that the current time lies in.
 	// Use iterator i to index through the control points and find the next control point
-	// the curve should follow at the current time passed as a parameter. If this value
+	// the curve should follow given the current time passed as a parameter. If this value
 	// matches the interval, nextPoint is set to i + 1.
-	std::cout << "---Time Interval curr Time: " << time << std::endl;
 
 	int length = controlPoints.size();
+	int i;
 
-	for (int i = 0; i < length - 1; i++) {
+	for (i = 0; i < length - 1; i++) {
 
 		if (controlPoints[i].time <= time && time < controlPoints[i + 1].time) {
 
 			nextPoint = i + 1;
-			std::cout << "i + 1 is: " << i + 1 << std::endl;
 
 		}
 
+	}
+
+	if (i == length - 1) {
+		return i;
 	}
 
 
@@ -219,22 +197,39 @@ Point Curve::useHermiteCurve(const unsigned int nextPoint, const float time)
 
 	// Calculate position at t = time on Hermite curve
 
+	int length = controlPoints.size();
+
+	if (time == controlPoints[nextPoint].time) {
+
+		return controlPoints[nextPoint].position;
+
+	}
+
 	int i = nextPoint - 1; // Index of the last control point.
 
-	// Determine the 2 control points we are interpolating between and their tangent
-	// vectors.
-	Point P0 = controlPoints[i].position;
-	Point P1 = controlPoints[i + 1].position;
+	// These values are used to convert the time to a value between 0 and 1 so that
+	// we can correctly interpolate the curve point.
+	float k = controlPoints[i].time;
+	float n = controlPoints[i + 1].time;
+
+	float t = (time - k) / (n - k);
+
+	// Calculation
+
+	// Determine the two control points we are interpolating between and their tangent vectors.
+	Point C0 = controlPoints[i].position;
+	Point C1 = controlPoints[nextPoint].position;
 	Vector T0 = controlPoints[i].tangent;
-	Vector T1 = controlPoints[i + 1].tangent;
+	Vector T1 = controlPoints[nextPoint].tangent;
 
 	// Calculate the position of the new point using the Hermite Equation.
-	float f1 = 2 * pow(time, 3) - 3 * pow(time, 2) + 1;
-	float f2 = -2 * pow(time, 3) + 3 * (time, 2);
-	float f3 = pow(time, 3) - 2 * pow(time, 2) + time;
-	float f4 = pow(time, 3) - pow(time, 2);
 
-	newPosition = P0.operator*(f1) +P1.operator*(f2) +T0.operator*(f3) +T1.operator*(f4);
+	float f1 = 2 * pow(t, 3) - 3 * pow(t, 2) + 1;
+	float f2 = 3 * pow(t, 2) - 2 * pow(t, 3);
+	float f3 = pow(t, 3) - 2 * pow(t, 2) + t;
+	float f4 = pow(t, 3) - pow(t, 2);
+
+	newPosition = (((C0.operator*(f1)).operator+(C1.operator*(f2))).operator+(T0.operator*(f3))).operator+(T1.operator*(f4));
 
 	// Return result
 	return newPosition;
