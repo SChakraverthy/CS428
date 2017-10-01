@@ -171,7 +171,7 @@ bool Curve::findTimeInterval(unsigned int& nextPoint, float time)
 	int length = controlPoints.size();
 	int i;
 
-	for (i = 0; i < length - 1; i++) {
+	for (i = 0; i < length /*- 1*/; i++) {
 
 		if (controlPoints[i].time <= time && time < controlPoints[i + 1].time) {
 
@@ -240,8 +240,25 @@ Point Curve::useCatmullCurve(const unsigned int nextPoint, const float time)
 {
 	Point newPosition;
 
+	// Calculate position at t = time on catmull curve
+
+	int length = controlPoints.size();
+
+	if (time == controlPoints[nextPoint].time) {
+
+		return controlPoints[nextPoint].position;
+
+	}
+
 	//Index of last control point
 	int i = nextPoint - 1;
+
+	// These values are used to convert the time to a value between 0 and 1 so that
+	// we can correctly interpolate the curve point.
+	float k = controlPoints[i].time;
+	float n = controlPoints[i + 1].time;
+
+	float t = (time - k) / (n - k);
 	
 	//catmull rom curve needs 4 control points, one before and one after
 	//the desried curve segment between P1 and P2
@@ -250,12 +267,49 @@ Point Curve::useCatmullCurve(const unsigned int nextPoint, const float time)
 	Point P2 = controlPoints[i+2].position;
 	Point P3 = controlPoints[i+3].position;
 
+	//trying to make the polynomial equation easier to perform operations on
+
+
 	// Calculate position at t = time on Catmull-Rom curve
-	//using a given equation
-	newPosition = 0.5 * ( (2 * P1) +
-				((-1 * P0) + P2) * time +
-				(2 * P0 - 5 * P1 + 4 * P2 - P3) * pow(time, 2) +
-				((-1 * P0) + 3 * P1 - 3 * P2 + P3) * pow(time, 3);
+	//using a given equation:
+	//newPosition = 0.5{ [2P1] + [time(P2 - P0)] + [time^2(2P0 - 5P1 + 4P2 - P3)] +	[time^3(3P1 - 3P2 + P3 - P0)] }
+
+	//split into a bunch of points to make the math easier
+	float f1 = 0.5f;
+	float f2 = t;
+	float f3 = pow(t, 2);
+	float f4 = pow(t, 3);
+
+	Point s1 = P1.operator*(2.0f);
+	Point L1 = P0.operator*(-1.0f);
+	Point s2 = P2.operator+(L1);
+	Point s3 = s2.operator*(t);
+	Point s4 = s1.operator+(s3);
+
+	Point r1 = P0.operator*(2.0f);
+	Point r2 = P1.operator*(5.0f);
+	Point r3 = P2.operator*(4.0f);
+	Point L2 = r2.operator*(-1.0f);
+	Point r4 = r1.operator+(L2);
+	Point r5 = r4.operator+(r3);
+	Point L3 = P3.operator*(-1.0f);
+	Point r6 = r5.operator+(L3);
+	Point r7 = r6.operator*(f3);
+
+	Point q1 = P1.operator*(3.0f);
+	Point q2 = P2.operator*(3.0f);
+	Point L4 = q2.operator*(-1.0f);
+	Point q3 = q1.operator+(L4);
+	Point q4 = q3.operator+(P3);
+	Point L5 = P0.operator*(-1.0f);
+	Point q5 = q4.operator+(L5);
+	Point q6 = q5.operator*(f4);
+
+	Point x1 = s4.operator+(r7);
+	Point x2 = x1.operator+(q6);
+	Point x3 = x2.operator*(f1);
+
+	newPosition = x3;
 
 	// Return result
 	return newPosition;
