@@ -240,16 +240,22 @@ Point Curve::useCatmullCurve(const unsigned int nextPoint, const float time)
 {
 	Point newPosition;
 
-	//================DELETE THIS PART AND THEN START CODING===================
-	static bool flag = false;
-	if (!flag)
-	{
-		std::cerr << "ERROR>>>>Member function useCatmullCurve is not implemented!" << std::endl;
-		flag = true;
-	}
-	//=========================================================================
+	//Index of last control point
+	int i = nextPoint - 1;
+	
+	//catmull rom curve needs 4 control points, one before and one after
+	//the desried curve segment between P1 and P2
+	Point P0 = controlPoints[i].position;
+	Point P1 = controlPoints[i+1].position;
+	Point P2 = controlPoints[i+2].position;
+	Point P3 = controlPoints[i+3].position;
 
 	// Calculate position at t = time on Catmull-Rom curve
+	//using a given equation
+	newPosition = 0.5 * ( (2 * P1) +
+				((-1 * P0) + P2) * time +
+				(2 * P0 - 5 * P1 + 4 * P2 - P3) * pow(time, 2) +
+				((-1 * P0) + 3 * P1 - 3 * P2 + P3) * pow(time, 3);
 
 	// Return result
 	return newPosition;
