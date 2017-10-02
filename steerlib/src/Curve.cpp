@@ -171,7 +171,7 @@ bool Curve::findTimeInterval(unsigned int& nextPoint, float time)
 	int length = controlPoints.size();
 	int i;
 
-	for (i = 0; i < length /*- 1*/; i++) {
+	for (i = 0; i < length - 1; i++) {
 
 		if (controlPoints[i].time <= time && time < controlPoints[i + 1].time) {
 
