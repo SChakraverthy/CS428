@@ -229,7 +229,13 @@ Point Curve::useHermiteCurve(const unsigned int nextPoint, const float time)
 	float f3 = pow(t, 3) - 2 * pow(t, 2) + t;
 	float f4 = pow(t, 3) - pow(t, 2);
 
-	newPosition = (((C0.operator*(f1)).operator+(C1.operator*(f2))).operator+(T0.operator*(f3))).operator+(T1.operator*(f4));
+	Point a = C0.operator*(f1);
+	Point b = C1.operator*(f2);
+	Vector c = (T0.operator*(f3)).operator*(n - k);
+	Vector d = (T1.operator*(f4)).operator*(n - k);
+
+
+	newPosition = ((a.operator+(b)).operator+(c)).operator+(d);
 
 	// Return result
 	return newPosition;
@@ -259,13 +265,13 @@ Point Curve::useCatmullCurve(const unsigned int nextPoint, const float time)
 	float n = controlPoints[i + 1].time;
 
 	float t = (time - k) / (n - k);
-	
+
 	//catmull rom curve needs 4 control points, one before and one after
 	//the desried curve segment between P1 and P2
 	Point P0 = controlPoints[i].position;
-	Point P1 = controlPoints[i+1].position;
-	Point P2 = controlPoints[i+2].position;
-	Point P3 = controlPoints[i+3].position;
+	Point P1 = controlPoints[i + 1].position;
+	Point P2 = controlPoints[i + 2].position;
+	Point P3 = controlPoints[i + 3].position;
 
 	//trying to make the polynomial equation easier to perform operations on
 
