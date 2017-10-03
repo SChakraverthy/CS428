@@ -150,7 +150,7 @@ bool Curve::checkRobust()
 	// Checks to make sure that there are at least 2 control points.
 	int length = controlPoints.size();
 
-	if (length < 2) {
+	if (length < 3) {
 
 		return false;
 
@@ -169,6 +169,7 @@ bool Curve::findTimeInterval(unsigned int& nextPoint, float time)
 	// matches the interval, nextPoint is set to i + 1.
 
 	int length = controlPoints.size();
+	//std::cout << length << std::endl;
 	int i;
 
 	for (i = 0; i < length - 1; i++) {
@@ -192,8 +193,15 @@ bool Curve::findTimeInterval(unsigned int& nextPoint, float time)
 // Implement Hermite curve
 Point Curve::useHermiteCurve(const unsigned int nextPoint, const float time)
 {
+
+	if (nextPoint > 10000) {
+		Point finish = Point(0, 0, 0);
+		return finish;
+	}
+
 	Point newPosition;
 	float normalTime, intervalTime;
+	float t;
 
 	// Calculate position at t = time on Hermite curve
 
@@ -212,7 +220,10 @@ Point Curve::useHermiteCurve(const unsigned int nextPoint, const float time)
 	float k = controlPoints[i].time;
 	float n = controlPoints[i + 1].time;
 
-	float t = (time - k) / (n - k);
+	if ((n - k) != 0) {
+		t = (time - k) / (n - k);
+	}
+	else t = 0;
 
 	// Calculation
 
@@ -244,7 +255,16 @@ Point Curve::useHermiteCurve(const unsigned int nextPoint, const float time)
 // Implement Catmull-Rom curve
 Point Curve::useCatmullCurve(const unsigned int nextPoint, const float time)
 {
+
+	if (nextPoint > 10000) {
+		Point finish = Point(0, 0, 0);
+		return finish;
+	}
+
 	Point newPosition;
+	float t;
+
+	//std::cout << nextPoint << std::endl;
 
 	// Calculate position at t = time on catmull curve
 
@@ -256,7 +276,12 @@ Point Curve::useCatmullCurve(const unsigned int nextPoint, const float time)
 	float k = controlPoints[i].time;
 	float n = controlPoints[i + 1].time;
 
-	float t = (time - k) / (n - k);
+	//std::cout << (n - k) << std::endl;
+	
+	if ((n - k) != 0) {
+		t = (time - k) / (n - k);
+	}
+	else t = 0;
 	
 	//catmull rom curve needs 4 control points, one before and one after
 	//the desried curve segment between P1 and P2
