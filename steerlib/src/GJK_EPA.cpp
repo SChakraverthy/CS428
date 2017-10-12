@@ -40,8 +40,8 @@ bool GJK_Algo(const std::vector<Util::Vector> &polyA, const std::vector<Util::Ve
 	Util::Vector d, t, v, w;
 
 	// Get the Minkoswki Difference for polyA and polyB.
-	minDiff = MinDiff(polyA, polyB);	
-	
+	minDiff = MinDiff(polyA, polyB);
+
 	int length = minDiff.size();
 
 	t = minDiff[std::rand() % length]; // Gets a random point within Minkowski Difference.
@@ -59,8 +59,9 @@ bool GJK_Algo(const std::vector<Util::Vector> &polyA, const std::vector<Util::Ve
 
 			return false;
 
-		} else {
-			
+		}
+		else {
+
 			W.push_back(w);
 
 			// Check if the simplex contains the origin.
@@ -200,4 +201,61 @@ bool containsOrigin(std::vector<Util::Vector>& simplex, Util::Vector& d) {
 	}
 
 	return false;
+}
+
+Util::Vector EPA_Algo(std::vector<Util::Vector> minDiff, std::vector<Util::Vector>& simplex, float& return_penetration_depth, Util::Vector& return_penetration_vector) {
+
+	while (true) {
+		findEdge(simplex, return_penetration_depth, return_penetration_vector);
+
+		Util::Vector p = supportFn(minDiff, return_penetration_vector);
+	
+		double d = Util::dot(p, return_penetration_vector);
+
+		if (d - return_penetration_depth < .0000001) {
+			
+		}
+		else {
+			simplex.push_back(p);;
+		}
+	}
+}
+
+std::vector<Util::Vector> findEdge(std::vector<Util::Vector> simplex, float& return_penetration_depth, Util::Vector& return_penetration_vector) {
+	
+	Util::Vector firstPoint;
+	Util::Vector secondPoint;
+	float edgeDistance = FLT_MAX;
+
+	int k;
+	
+	for (int i = 0; i < simplex.size; i++) {
+		
+		if (i + 1 == simplex.size) {
+		
+			k = 0;
+		
+		}
+		
+		else {
+		
+			k = i + 1;
+		
+		}
+
+		Util::Vector A = simplex[i];
+		Util::Vector B = simplex[k];
+		Util::Vector E = B.operator-(A);
+		Util::Vector OA = A.operator-();
+		Util::Vector N = Util::cross(Util::cross(E, OA), E);
+
+		N.norm;
+
+		float d = Util::dot(N, A);
+
+		if (d < edgeDistance) {
+			edgeDistance = d;
+		}
+
+	}
 }
