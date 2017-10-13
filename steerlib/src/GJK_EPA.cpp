@@ -256,17 +256,21 @@ void EPA_Algo(std::vector<Util::Vector> minDiff, std::vector<Util::Vector>& simp
 
 		//Find the edge of the simplex closest to the origin.
 		std::vector<Util::Vector> closestEdge = findEdge(simplex);
-		Util::Vector AB = closestEdge[1] - closestEdge[0];
+		Util::Vector A = closestEdge[0];
+		Util::Vector B = closestEdge[1];
+
+		Util::Vector AB = B - A;
+		Util::Vector A0 = A.operator-();
 
 		//Get the support point in the direction normal to this edge.
-		Util::Vector d; // Need to set to the normal to edge AB away from the origin.
-		Util::Vector supportPoint = supportFn(minDiff, d);
+		Util::Vector d = Util::cross(Util::cross(AB, A0), AB);
+		Util::Vector supportPoint = supportFn(minDiff, d.operator-());
 
 		// 3: Get the penetration vector and depth.
 
-		float dotProd = Util::dot(supportPoint,d);
-		float depth;
-		int k;
+		//float dotProd = Util::dot(supportPoint, d.operator-());
+		Util::Vector distance = supportPoint.operator-(d.operator-());
+		float depth = distance.length();
 
 		if (depth < .0000001) {
 
@@ -275,8 +279,9 @@ void EPA_Algo(std::vector<Util::Vector> minDiff, std::vector<Util::Vector>& simp
 			return_penetration_vector = supportPoint;
 			return;
 
-		}
-		else {
+		} else {
+
+			int k;
 
 			// Add the support point to the simplex.
 			for (int i = 0; i < simplex.size(); i++) {
