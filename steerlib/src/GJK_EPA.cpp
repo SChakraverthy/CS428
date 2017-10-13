@@ -32,7 +32,7 @@ bool SteerLib::GJK_EPA::intersect(float& return_penetration_depth, Util::Vector&
 	if (hasIntersection) {
 
 		//Find intersection point and penetration vector using EPA.
-		
+
 		std::vector<Util::Vector> minDiff = MinDiff(_shapeA, _shapeB); //Calculate Minkowski Difference to pass into EPA.
 		EPA_Algo(minDiff, simplex, return_penetration_depth, return_penetration_vector);
 
@@ -48,8 +48,8 @@ bool GJK_Algo(const std::vector<Util::Vector> &polyA, const std::vector<Util::Ve
 	Util::Vector d, t, v, w;
 
 	// Get the Minkoswki Difference for polyA and polyB.
-	minDiff = MinDiff(polyA, polyB);	
-	
+	minDiff = MinDiff(polyA, polyB);
+
 	int length = minDiff.size();
 
 	t = minDiff[std::rand() % length]; // Gets a random point within Minkowski Difference.
@@ -67,8 +67,9 @@ bool GJK_Algo(const std::vector<Util::Vector> &polyA, const std::vector<Util::Ve
 
 			return false;
 
-		} else {
-			
+		}
+		else {
+
 			W.push_back(w);
 
 			// Check if the simplex contains the origin.
@@ -250,36 +251,30 @@ bool containsOrigin(std::vector<Util::Vector>& simplex, Util::Vector& d) {
 
 void EPA_Algo(std::vector<Util::Vector> minDiff, std::vector<Util::Vector>& simplex, float& return_penetration_depth, Util::Vector& return_penetration_vector) {
 
-	// Find the edge of the simplex closest to the origin.
-
 	while (true) {
 
 		//Find the edge of the simplex closest to the origin.
 		std::vector<Util::Vector> closestEdge = findEdge(simplex);
 		Util::Vector A = closestEdge[0];
 		Util::Vector B = closestEdge[1];
-
 		Util::Vector AB = B - A;
-		Util::Vector A0 = A.operator-();
 
-		//Get the support point in the direction normal to this edge.
-		Util::Vector d = Util::cross(Util::cross(AB, A0), AB);
-		Util::Vector supportPoint = supportFn(minDiff, d.operator-());
+		// Find a support point in the direction normal to the edge away from the origin.
+		Util::Vector edge_normal = Util::normalize(Util::cross(Util::cross(AB, A), AB));
+		Util::Vector supportPoint = supportFn(minDiff, edge_normal);
 
-		// 3: Get the penetration vector and depth.
+		float dist = Util::dot(supportPoint, edge_normal);
+		float edge_dist = Util::dot(edge_normal, A);
 
-		//float dotProd = Util::dot(supportPoint, d.operator-());
-		Util::Vector distance = supportPoint.operator-(d.operator-());
-		float depth = distance.length();
-
-		if (depth < .0000001) {
+		if (dist - edge_dist <= 0.0001) {
 
 			// Found the MTV.
-			return_penetration_depth = supportPoint.length();
-			return_penetration_vector = supportPoint;
+			return_penetration_depth = edge_dist;
+			return_penetration_vector = edge_normal;
 			return;
 
-		} else {
+		}
+		else {
 
 			int k;
 
@@ -350,27 +345,7 @@ std::vector<Util::Vector> findEdge(std::vector<Util::Vector> simplex) {
 	}
 
 	closestEdge.push_back(firstPoint);
-		closestEdge.push_back(secondPoint);
+	closestEdge.push_back(secondPoint);
 
-		return closestEdge;
-}
-
-
-void testFn(std::vector<Util::Vector> polyA, std::vector<Util::Vector> polyB) {
-
-	std::cout << "The vertices in polyA are: " << std::endl;
-	for (int i = 0; i < polyA.size(); i++) {
-
-		std::cout << polyA[i] << std::endl;
-
-	}
-
-	std::cout << "The vertices in polyB are: " << std::endl;
-	for (int i = 0; i < polyB.size(); i++) {
-
-		std::cout << polyB[i] << std::endl;
-
-	}
-
-	return;
+	return closestEdge;
 }
