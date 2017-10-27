@@ -798,6 +798,14 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 	prefForce = prefForce + velocity();
 	// _velocity = prefForce;
 
+	// Apply a defined social force:
+	Util::Vector socialForce;
+
+	socialForce = seek(_velocity, goalDirection);
+	//socialForce = flee(_velocity, goalDirection);
+	//socialForce = pursue(_velocity, _position, goalDirection);
+	//socialForce = evade(_velocity, _position, goalDirection);
+
 	Util::Vector repulsionForce = calcRepulsionForce(dt);
 	if ( repulsionForce.x != repulsionForce.x)
 	{
@@ -822,6 +830,8 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 	_velocity = (prefForce) + repulsionForce + proximityForce;
 	// _velocity = (prefForce);
 	// _velocity = velocity() + repulsionForce + proximityForce;
+
+	// _velocity = (prefForce) + repulsionForce + proximityForce + socialForce; ***UNCOMMENT THIS LINE TO APPLY SOCIAL FORCE.***/
 
 	_velocity = clamp(velocity(), _SocialForcesParams.sf_max_speed);
 	_velocity.y=0.0f;
@@ -985,3 +995,32 @@ void SocialForcesAgent::draw()
 #endif
 }
 
+Util::Vector SocialForcesAgent::seek(Util::Vector _velocity, Util::Vector goalDirection) {
+
+	Util::Vector dVel = goalDirection * PERFERED_SPEED;
+	return Util::normalize(dVel.operator-(_velocity));
+
+}
+
+Util::Vector SocialForcesAgent::flee(Util::Vector _velocity, Util::Vector goalDirection) {
+
+	Util::Vector dVel = PERFERED_SPEED* goalDirection.operator-();
+	return Util::normalize(dVel.operator-(_velocity));
+
+}
+
+Util::Vector SocialForcesAgent::pursue(Util::Vector _velocity, Util::Point _position, Util::Vector goalDirection) {
+
+	float T = goalDirection.length() / PERFERED_SPEED;
+	Util::Point futurePos = (_position + _velocity).operator*(T);
+	Util::Vector newGoalDir = normalize(futurePos - _position);
+	return seek(_velocity, newGoalDir);
+}
+
+Util::Vector SocialForcesAgent::evade(Util::Vector _velocity, Util::Point _position, Util::Vector goalDirection) {
+
+	float T = goalDirection.length() / PERFERED_SPEED;
+	Util::Point futurePos = (_position + _velocity).operator*(T);
+	Util::Vector newGoalDir = normalize(futurePos - _position);
+	return flee(_velocity, newGoalDir);
+}
