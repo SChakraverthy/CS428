@@ -112,7 +112,7 @@ private:
 	// holds the location of the best local target along the midtermpath
 
 	// Social Forces headers.
-	void pursueAndEvade(float dt, Util::Vector &goalDirection);
+	void pursueAndEvade(Util::Vector &goalDirection);
 
 	friend class SocialForcesAIModule;
 
