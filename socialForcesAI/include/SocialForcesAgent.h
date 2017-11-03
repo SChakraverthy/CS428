@@ -111,11 +111,8 @@ private:
 	// For midterm planning stores the plan to the current goal
 	// holds the location of the best local target along the midtermpath
 
-	// Social Forces Definitions
-	Util::Vector seek(Util::Vector _velocity, Util::Vector goalDirection);
-	Util::Vector flee(Util::Vector _velocity, Util::Vector goalDirection);
-	Util::Vector pursue(Util::Vector _velocity, Util::Point _position, Util::Vector goalDirection);
-	Util::Vector evade(Util::Vector _velocity, Util::Point _position, Util::Vector goalDirection);
+	// Social Forces headers.
+	void pursueAndEvade(float dt, Util::Vector &goalDirection);
 
 	friend class SocialForcesAIModule;
 

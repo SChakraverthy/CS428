@@ -149,7 +149,7 @@ void SocialForcesAgent::reset(const SteerLib::AgentInitialConditions & initialCo
 	// iterate over the sequence of goals specified by the initial conditions.
 	for (unsigned int i=0; i<initialConditions.goals.size(); i++) {
 		if (initialConditions.goals[i].goalType == SteerLib::GOAL_TYPE_SEEK_STATIC_TARGET ||
-				initialConditions.goals[i].goalType == GOAL_TYPE_AXIS_ALIGNED_BOX_GOAL)
+				initialConditions.goals[i].goalType == GOAL_TYPE_AXIS_ALIGNED_BOX_GOAL || initialConditions.goals[i].goalType == GOAL_TYPE_SEEK_DYNAMIC_TARGET || initialConditions.goals[i].goalType == GOAL_TYPE_FLEE_DYNAMIC_TARGET)
 		{
 			if (initialConditions.goals[i].targetIsRandom)
 			{
@@ -166,7 +166,7 @@ void SocialForcesAgent::reset(const SteerLib::AgentInitialConditions & initialCo
 			}
 		}
 		else {
-			throw Util::GenericException("Unsupported goal type; SocialForcesAgent only supports GOAL_TYPE_SEEK_STATIC_TARGET and GOAL_TYPE_AXIS_ALIGNED_BOX_GOAL.");
+			throw Util::GenericException("Unsupported goal type; SocialForcesAgent only supports GOAL_TYPE_SEEK_STATIC_TARGET, GOAL_TYPE_AXIS_ALIGNED_BOX_GOAL, GOAL_TYPE_SEEK_DYNAMIC TARGET, and GOAL_TYPE_FLEE_DYNAMIC_TARGET.");
 		}
 	}
 
@@ -793,18 +793,15 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 	{
 		goalDirection = normalize(goalInfo.targetLocation - position());
 	}
+
+	// Social Forces Test
+	pursueAndEvade(dt, goalDirection);
+
+
 	// _prefVelocity = goalDirection * PERFERED_SPEED;
 	Util::Vector prefForce = (((goalDirection * PERFERED_SPEED) - velocity()) / (_SocialForcesParams.sf_acceleration/dt)); //assumption here
 	prefForce = prefForce + velocity();
 	// _velocity = prefForce;
-
-	// Apply a defined social force:
-	Util::Vector socialForce;
-
-	socialForce = seek(_velocity, goalDirection);
-	//socialForce = flee(_velocity, goalDirection);
-	//socialForce = pursue(_velocity, _position, goalDirection);
-	//socialForce = evade(_velocity, _position, goalDirection);
 
 	Util::Vector repulsionForce = calcRepulsionForce(dt);
 	if ( repulsionForce.x != repulsionForce.x)
@@ -827,11 +824,11 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 		alpha=0;
 	}
 
+	
+
 	_velocity = (prefForce) + repulsionForce + proximityForce;
 	// _velocity = (prefForce);
 	// _velocity = velocity() + repulsionForce + proximityForce;
-
-	// _velocity = (prefForce) + repulsionForce + proximityForce + socialForce; ***UNCOMMENT THIS LINE TO APPLY SOCIAL FORCE.***/
 
 	_velocity = clamp(velocity(), _SocialForcesParams.sf_max_speed);
 	_velocity.y=0.0f;
@@ -995,32 +992,117 @@ void SocialForcesAgent::draw()
 #endif
 }
 
-Util::Vector SocialForcesAgent::seek(Util::Vector _velocity, Util::Vector goalDirection) {
+void SocialForcesAgent::pursueAndEvade(float dt, Util::Vector &goalDirection) {
 
-	Util::Vector dVel = goalDirection * PERFERED_SPEED;
-	return Util::normalize(dVel.operator-(_velocity));
+	// Determine what type of agent the current agent is.
+	SteerLib::AgentGoalInfo goalInfo = this->_goalQueue.front();
+	SteerLib::AgentGoalTypeEnum goalType = goalInfo.goalType;
+	bool isEvader = false;
+	float rad_mod = 10.0;
 
+	if (goalType != GOAL_TYPE_SEEK_DYNAMIC_TARGET && goalType != GOAL_TYPE_FLEE_DYNAMIC_TARGET) {
+
+		// Not the behavior we want.
+		return;
+
+	}
+
+	if (goalType == GOAL_TYPE_FLEE_DYNAMIC_TARGET) {
+
+		isEvader = true;
+		rad_mod = 0.5;
+
+	}
+
+	// Find all neighboring objects in the spatial database.
+
+	std::set<SteerLib::SpatialDatabaseItemPtr> _neighbors;
+
+	getSimulationEngine()->getSpatialDatabase()->getItemsInRange(_neighbors,
+		_position.x - (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		_position.x + (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		_position.z - (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		_position.z + (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		dynamic_cast<SteerLib::SpatialDatabaseItemPtr>(this));
+
+	SteerLib::AgentInterface *tmp_agent;
+	Util::Vector away = Util::Vector(0, 0, 0);
+
+	
+
+	// Loop through neighboring objects and determine if the neighbor is an agent or an obstacle. If it is an obstacle, then ignore it and continue looking at the other neighbors.
+	// If the neighbor is an agent, then determine if need to pursue or evade the agent.
+
+	for (std::set<SteerLib::SpatialDatabaseItemPtr>::iterator neighbor = _neighbors.begin(); neighbor != _neighbors.end(); neighbor++) {
+
+
+		if ((*neighbor)->isAgent()) {
+
+			tmp_agent = dynamic_cast<SteerLib::AgentInterface *> (*neighbor);
+
+			// Check to see the relation between this agent and it's neighbor.
+			std::queue<SteerLib::AgentGoalInfo> neighbor_goalInfo_queue = tmp_agent->agentGoals();
+			SteerLib::AgentGoalInfo neighbor_goalInfo = neighbor_goalInfo_queue.front();
+			SteerLib::AgentGoalTypeEnum neighbor_goalType = neighbor_goalInfo.goalType;
+
+			//SteerLib::AgentGoalTypeEnum neighbor_goalType = neighbor_goalInfo;
+
+			if (isEvader && neighbor_goalType == GOAL_TYPE_SEEK_DYNAMIC_TARGET) {
+
+				// This agent should evade the neighboring agent.
+
+				// Calculate the distance vector between this agent and the pursuer.
+				Util::Vector distanceVec = tmp_agent->position() - position();
+				float distance = distanceVec.length();
+				float numUpdatesAhead = distance / sf_max_speed;
+				Util::Point futurePos = tmp_agent->position() + tmp_agent->velocity() * numUpdatesAhead;
+
+				// Normalize and scale the away force.
+				Util::Vector away_tmp = normalize(position() - futurePos);
+				//away_tmp *= sf_max_speed;
+
+				// Add to the total away force.
+				// Add to the total away force for this agent.
+				goalDirection = away_tmp;
+
+
+			}
+			else if (!isEvader && neighbor_goalType == GOAL_TYPE_FLEE_DYNAMIC_TARGET) {
+
+				// This agent should pursue the neighboring agent.
+				Util::Vector distanceVec = tmp_agent->position() - position();
+				float distance = distanceVec.length();
+				float numUpdatesAhead = distance / sf_max_speed;
+
+				Util::Point futurePos = tmp_agent->position() + tmp_agent->velocity() * numUpdatesAhead;
+				Util::Vector towards_tmp = normalize(futurePos - position());
+				goalDirection = towards_tmp;
+				
+
+			}
+
+
+		}
+		else {
+
+			continue;
+
+		}
+
+
+	}
+
+	goalDirection = normalize(goalDirection);
+	return;
 }
 
-Util::Vector SocialForcesAgent::flee(Util::Vector _velocity, Util::Vector goalDirection) {
+/*
+bool SocialForcesAgent::compareColor(Util::Color color1, Util::Color color2) {
 
-	Util::Vector dVel = PERFERED_SPEED* goalDirection.operator-();
-	return Util::normalize(dVel.operator-(_velocity));
+	if ( (color1.r != color2.r) || (color1.g != color2.g) || (color1.b != color2.b)) {
+		return false;
+	}
 
+	return true;
 }
-
-Util::Vector SocialForcesAgent::pursue(Util::Vector _velocity, Util::Point _position, Util::Vector goalDirection) {
-
-	float T = goalDirection.length() / PERFERED_SPEED;
-	Util::Point futurePos = (_position + _velocity).operator*(T);
-	Util::Vector newGoalDir = normalize(futurePos - _position);
-	return seek(_velocity, newGoalDir);
-}
-
-Util::Vector SocialForcesAgent::evade(Util::Vector _velocity, Util::Point _position, Util::Vector goalDirection) {
-
-	float T = goalDirection.length() / PERFERED_SPEED;
-	Util::Point futurePos = (_position + _velocity).operator*(T);
-	Util::Vector newGoalDir = normalize(futurePos - _position);
-	return flee(_velocity, newGoalDir);
-}
+*/
