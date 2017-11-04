@@ -1,0 +1,20 @@
+WallFollower Implementation-------------------------
+To Run: uncomment line xxx : "prefForce = wallFollower();"
+The first thing wallFollower does is search for neighbors around it. It then iterates through the list of
+neighbors and finds the ones that are not agents, thus any obstacle neighbor. While it's doing that, it
+keeps track of which one is closest to the agent in question via the pointBoundDistance function. PointBoundDistance
+basically just takes in a box and a point and performs the distance equation on it, returning the minimum.
+After the closest wall is determined, the normal of that wall is gathered through calcWallNormal, then the cross
+product of that normal and the vector (0,1,0) is returned. In updateAI, prefForce is set to that cross product.
+
+
+WallFollower Benchmark------------------------------
+
+             total number of agents: 1
+avg. number of collisions per agent: 0
+    average time spent by one agent: 147.904
+  average energy spent by one agent: 0
+ sum of instantaneous accelerations: 0
+(alpha, beta, gamma, delta) weights: (50,1,1,1)
+                       weighted sum: 50*0 + 1*147.904 + 1*0 + 1*0 = 147.904
+                        final score: 147.904

@@ -803,6 +803,10 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 	prefForce = prefForce + velocity();
 	// _velocity = prefForce;
 
+	//WALLFOLLOWER--------------------------------------------------
+	//prefForce = wallFollower();
+	//WALLFOLLOWER--------------------------------------------------
+
 	Util::Vector repulsionForce = calcRepulsionForce(dt);
 	if (repulsionForce.x != repulsionForce.x)
 	{
@@ -887,6 +891,57 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 		_forward = normalize(_velocity);
 	}
 	// _position = _position + (_velocity * dt);
+
+}
+
+
+double SocialForcesAgent::pointBoundDistance(Util::AxisAlignedBox box, Util::Point p) {
+	if (box.xmin < p.x && box.xmax > p.x) {
+		return std::min(std::abs(p.z - box.zmin), std::abs(p.z - box.zmax));
+	}
+	else if (box.zmin < p.z && box.zmax > p.z) {
+		return std::min(std::abs(p.x - box.xmin), std::abs(p.x - box.xmax));
+	}
+	else {
+		return std::min(
+			std::min(
+				std::sqrt(((p.x - box.xmin)*(p.x - box.xmin) + (p.z - box.zmin)*(p.z - box.zmin))),
+				std::sqrt(((p.x - box.xmin)*(p.x - box.xmin) + (p.z - box.zmax)*(p.z - box.zmax)))
+			),
+			std::min(
+				std::sqrt(((p.x - box.xmax)*(p.x - box.xmax) + (p.z - box.zmax)*(p.z - box.zmin))),
+				std::sqrt(((p.x - box.xmax)*(p.x - box.xmax) + (p.z - box.zmin)*(p.z - box.zmin)))
+			)
+		);
+	}
+}
+
+Util::Vector SocialForcesAgent::wallFollower() {
+
+	std::set<SteerLib::SpatialDatabaseItemPtr> _neighbors;
+	getSimulationEngine()->getSpatialDatabase()->getItemsInRange(_neighbors,
+		_position.x - (this->_radius + _SocialForcesParams.sf_query_radius),
+		_position.x + (this->_radius + _SocialForcesParams.sf_query_radius),
+		_position.z - (this->_radius + _SocialForcesParams.sf_query_radius),
+		_position.z + (this->_radius + _SocialForcesParams.sf_query_radius),
+		dynamic_cast<SteerLib::SpatialDatabaseItemPtr>(this));
+
+	SteerLib::ObstacleInterface *closestObstacle;
+	double distance = 10000;
+
+	for (std::set<SteerLib::SpatialDatabaseItemPtr>::iterator neighbor = _neighbors.begin(); neighbor != _neighbors.end(); neighbor++) {
+		if (!((*neighbor)->isAgent())) {
+			SteerLib::ObstacleInterface *wallObstacle = (ObstacleInterface*)(*neighbor);
+			double d = SocialForcesAgent::pointBoundDistance(wallObstacle->getBounds(), this->position());
+			if (d < distance) {
+				closestObstacle = wallObstacle;
+				distance = d;
+			}
+		}
+	}
+
+	Util::Vector normal = calcWallNormal(closestObstacle);
+	return cross(normal, Util::Vector(0, 1, 0));
 
 }
 
