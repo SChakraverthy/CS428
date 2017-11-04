@@ -895,6 +895,93 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 }
 
 
+void SocialForcesAgent::leadAndFollow(Util::Vector &goalDirection) {
+
+	// Determine what type of agent the current agent is.
+	SteerLib::AgentGoalInfo goalInfo = this->_goalQueue.front();
+	SteerLib::AgentGoalTypeEnum goalType = goalInfo.goalType;
+	bool isFollower = false;
+	float rad_mod = 30.0;
+
+	if (goalType != GOAL_TYPE_SEEK_DYNAMIC_TARGET && goalType != GOAL_TYPE_SEEK_STATIC_TARGET) {
+
+		// Not the behavior we want.
+		return;
+
+	}
+
+	if (goalType == GOAL_TYPE_SEEK_DYNAMIC_TARGET) {
+
+		isFollower = true;
+
+	}
+
+	// Find all neighboring objects in the spatial database.
+
+	std::set<SteerLib::SpatialDatabaseItemPtr> _neighbors;
+
+	getSimulationEngine()->getSpatialDatabase()->getItemsInRange(_neighbors,
+		_position.x - (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		_position.x + (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		_position.z - (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		_position.z + (this->_radius + _SocialForcesParams.sf_query_radius * rad_mod),
+		dynamic_cast<SteerLib::SpatialDatabaseItemPtr>(this));
+
+	SteerLib::AgentInterface *tmp_agent;
+	Util::Vector away = Util::Vector(0, 0, 0);
+
+
+
+	// Loop through neighboring objects and determine if the neighbor is an agent or an obstacle. If it is an obstacle, then ignore it and continue looking at the other neighbors.
+	// Calculate the goal direction for the agent based on its goal type behavior.
+
+	for (std::set<SteerLib::SpatialDatabaseItemPtr>::iterator neighbor = _neighbors.begin(); neighbor != _neighbors.end(); neighbor++) {
+
+
+		if ((*neighbor)->isAgent()) {
+
+			tmp_agent = dynamic_cast<SteerLib::AgentInterface *> (*neighbor);
+
+			// Calculate the distance vector between this agent (evader) and its neighbor.
+			Util::Vector distanceVec = tmp_agent->position() - position();
+			float distance = distanceVec.length();
+
+			// Calculate the future position of the neighboring agent.
+			float numUpdatesAhead = distance / sf_max_speed;
+			Util::Point futurePos = tmp_agent->position() + tmp_agent->velocity() * numUpdatesAhead;
+
+			if (isFollower) {
+
+				// This agent should evade the neighboring agent.
+
+				// Calculate and normalize the away force.
+				Util::Vector away_tmp = normalize(position() - futurePos);
+
+				// Set the goal direction.
+				goalDirection = away_tmp;
+
+			}
+			else {
+
+				// This agent should pursue the neighboring agent.
+
+				// Calculate and normalize the towards force.
+				Util::Vector towards_tmp = normalize(futurePos - position());
+
+				// Set the goal direction.
+				goalDirection = towards_tmp;
+
+
+			}
+
+		}
+
+	}
+
+	return;
+}
+
+
 double SocialForcesAgent::pointBoundDistance(Util::AxisAlignedBox box, Util::Point p) {
 	if (box.xmin < p.x && box.xmax > p.x) {
 		return std::min(std::abs(p.z - box.zmin), std::abs(p.z - box.zmax));

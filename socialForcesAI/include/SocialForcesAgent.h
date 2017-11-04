@@ -36,6 +36,7 @@ public:
 	~SocialForcesAgent();
 	void reset(const SteerLib::AgentInitialConditions & initialConditions, SteerLib::EngineInterface * engineInfo);
 	void updateAI(float timeStamp, float dt, unsigned int frameNumber);
+	void leadAndFollow(Util::Vector & goalDirection);
 	double pointBoundDistance(Util::AxisAlignedBox box, Util::Point p);
 	Util::Vector wallFollower();
 	void disable();
