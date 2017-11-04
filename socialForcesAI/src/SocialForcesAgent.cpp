@@ -1010,7 +1010,6 @@ void SocialForcesAgent::pursueAndEvade(Util::Vector &goalDirection) {
 	if (goalType == GOAL_TYPE_FLEE_DYNAMIC_TARGET) {
 
 		isEvader = true;
-		rad_mod = 0.5;
 
 	}
 
@@ -1031,7 +1030,7 @@ void SocialForcesAgent::pursueAndEvade(Util::Vector &goalDirection) {
 
 
 	// Loop through neighboring objects and determine if the neighbor is an agent or an obstacle. If it is an obstacle, then ignore it and continue looking at the other neighbors.
-	// If the neighbor is an agent, then determine if need to pursue or evade the agent.
+	// Calculate the goal direction for the agent based on its goal type behavior.
 
 	for (std::set<SteerLib::SpatialDatabaseItemPtr>::iterator neighbor = _neighbors.begin(); neighbor != _neighbors.end(); neighbor++) {
 
@@ -1040,24 +1039,17 @@ void SocialForcesAgent::pursueAndEvade(Util::Vector &goalDirection) {
 
 			tmp_agent = dynamic_cast<SteerLib::AgentInterface *> (*neighbor);
 
-			// Check to see the relation between this agent and it's neighbor.
-			std::queue<SteerLib::AgentGoalInfo> neighbor_goalInfo_queue = tmp_agent->agentGoals();
-			SteerLib::AgentGoalInfo neighbor_goalInfo = neighbor_goalInfo_queue.front();
-			SteerLib::AgentGoalTypeEnum neighbor_goalType = neighbor_goalInfo.goalType;
+			// Calculate the distance vector between this agent (evader) and its neighbor.
+			Util::Vector distanceVec = tmp_agent->position() - position();
+			float distance = distanceVec.length();
 
-			//SteerLib::AgentGoalTypeEnum neighbor_goalType = neighbor_goalInfo;
-
+			// Calculate the future position of the neighboring agent.
+			float numUpdatesAhead = distance / sf_max_speed;
+			Util::Point futurePos = tmp_agent->position() + tmp_agent->velocity() * numUpdatesAhead;
+		
 			if (isEvader) {
 
 				// This agent should evade the neighboring agent.
-
-				// Calculate the distance vector between this agent (evader) and its neighbor.
-				Util::Vector distanceVec = tmp_agent->position() - position();
-				float distance = distanceVec.length();
-
-				// Calculate the future position of the neighboring agent.
-				float numUpdatesAhead = distance / sf_max_speed;
-				Util::Point futurePos = tmp_agent->position() + tmp_agent->velocity() * numUpdatesAhead;
 
 				// Calculate and normalize the away force.
 				Util::Vector away_tmp = normalize(position() - futurePos);
@@ -1068,14 +1060,6 @@ void SocialForcesAgent::pursueAndEvade(Util::Vector &goalDirection) {
 			} else{
 
 				// This agent should pursue the neighboring agent.
-
-				// Calculate the distance vector between this agent (pursuer) and its neighbor.
-				Util::Vector distanceVec = tmp_agent->position() - position();
-				float distance = distanceVec.length();
-
-				// Calculate the future position of the neighboring agent.
-				float numUpdatesAhead = distance / sf_max_speed;
-				Util::Point futurePos = tmp_agent->position() + tmp_agent->velocity() * numUpdatesAhead;
 
 				// Calculate and normalize the towards force.
 				Util::Vector towards_tmp = normalize(futurePos - position());
