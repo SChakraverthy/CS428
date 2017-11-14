@@ -96,9 +96,17 @@ namespace SteerLib
 			*/
 
 			bool computePath(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, SteerLib::SpatialDataBaseInterface * _gSpatialDatabase, bool append_to_path = false);
+
+			// My function definitions
+			AStarPlannerNode getNodeWithLowest_f(std::vector<SteerLib::AStarPlannerNode> openSet);
+			std::vector<int> getSuccessors(SteerLib::AStarPlannerNode predecessor);
+			void printSet(std::vector<SteerLib::AStarPlannerNode> set);
+			double calcEuclidianDistance(Util::Point p1, Util::Point p2);
+
 		private:
 			SteerLib::SpatialDataBaseInterface * gSpatialDatabase;
 	};
+
 
 
 }
