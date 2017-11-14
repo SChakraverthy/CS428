@@ -109,6 +109,7 @@ namespace SteerLib
 			// Generate the list of successor indices.
 			std::vector<int> successors = getSuccessors(minNode);
 
+			// For each successor
 			for (std::vector<int>::iterator i = successors.begin(); i != successors.end(); i++) {
 
 				int successor_index = *i;
@@ -144,6 +145,7 @@ namespace SteerLib
 					if (successor_pos.operator==(j->point)) {
 
 						isInClosedSet = true;
+						break;
 
 					}
 
@@ -154,31 +156,52 @@ namespace SteerLib
 					break;
 				}
 
+				bool inOpenSet = false;
+
+
 				// Compare f values if the node is already in the open set.
 				for (std::vector<SteerLib::AStarPlannerNode>::iterator j = openSet.begin(); j != openSet.end(); j++) {
 
-
+					inOpenSet = true;
 
 					if (successor_index == gSpatialDatabase->getCellIndexFromLocation(j->point)) {
 
 						// The successor is already in the open set. Compare f values.
 						if (new_f < j->f ) {
 
-							// Keep old values.
+							// Need to update the node's info.
+							j->f = new_f;
+							j->g = new_g;
+							j->parent = &minNode;
+							break;
 						
 						}
+						else if (new_f == j->f) {
 
+							if (new_g < j->g) {
 
+								// Update the node's info if the newly computed g value is lower than the old g value.
+								j->f = new_f;
+								j->g = new_g;
+								j->parent = &minNode;
+
+							}
+
+							break;
+
+						}
 
 					}
 
 
 				}
 
+				if (!inOpenSet) {
 
-				// The successor was neither in the open or closed list. Add to the open list with the computed values.
-				SteerLib::AStarPlannerNode* node = new AStarPlannerNode(successor_pos, new_g, new_f, &minNode);
-				openSet.push_back(*node);
+					// The successor was neither in the open or closed lists. Add to the open list with the computed values.
+					SteerLib::AStarPlannerNode* node = new AStarPlannerNode(successor_pos, new_g, new_f, &minNode);
+					openSet.push_back(*node);
+				}
 
 
 			}
