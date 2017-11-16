@@ -37,6 +37,7 @@ void SearchAgent::disable()
 	_enabled = false;
 }
 
+bool called = false;
 void SearchAgent::reset(const SteerLib::AgentInitialConditions & initialConditions, SteerLib::EngineInterface * engineInfo)
 {
 	// compute the "old" bounding box of the agent before it is reset.  its OK that it will be invalid if the agent was previously disabled
@@ -85,6 +86,12 @@ void SearchAgent::reset(const SteerLib::AgentInitialConditions & initialConditio
 	assert(_forward.length() != 0.0f);
 	assert(_goalQueue.size() != 0);
 	assert(_radius != 0.0f);
+
+	if (!called) {
+		computePlan();
+		called = true;
+	}
+
 }
 
 
@@ -120,16 +127,12 @@ void SearchAgent::computePlan()
 
 }
 
-//compute plan must be called here
-bool called = false;
+
 void SearchAgent::updateAI(float timeStamp, float dt, unsigned int frameNumber)
 {
 	Util::AutomaticFunctionProfiler profileThisFunction(&SearchAIGlobals::gPhaseProfilers->aiProfiler);
 
-	if (!called) {
-		computePlan();
-		called = true;
-	}
+
 
 	double steps = (DURATION / (double)__path.size());
 	if (timeStamp*dt > last_waypoint*steps)
