@@ -47,13 +47,13 @@ namespace SteerLib
 		{
 			for (int j = z_range_min; j<=z_range_max; j+=GRID_STEP)
 			{
-				int index = gSpatialDatabase->getCellIndexFromGridCoords( i, j );
-				traversal_cost += gSpatialDatabase->getTraversalCost ( index );
-				
+int index = gSpatialDatabase->getCellIndexFromGridCoords(i, j);
+traversal_cost += gSpatialDatabase->getTraversalCost(index);
+
 			}
 		}
 
-		if ( traversal_cost > COLLISION_COST ) 
+		if (traversal_cost > COLLISION_COST)
 			return false;
 		return true;
 	}
@@ -69,152 +69,168 @@ namespace SteerLib
 
 
 
-	bool AStarPlanner::computePath(std::vector<Util::Point>& agent_path,  Util::Point start, Util::Point goal, SteerLib::SpatialDataBaseInterface * _gSpatialDatabase, bool append_to_path)
+	bool AStarPlanner::computePath(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, SteerLib::SpatialDataBaseInterface * _gSpatialDatabase, bool append_to_path)
 	{
 		gSpatialDatabase = _gSpatialDatabase;
 
 		//TODO
-		std::cout<<"In A*" << std::endl;
+		std::cout << "In A" << std::endl;
 
-		// Create open and closed lists.
-		std::vector<SteerLib::AStarPlannerNode> openSet;
-		std::vector<SteerLib::AStarPlannerNode> closedSet;
+		// Weighted A*
+		float epsilon = 1;
+		computePathWeightedAstar(agent_path, start, goal, epsilon, append_to_path);
+
+
+		return false;
+	}
+
+
+	bool AStarPlanner::computePathWeightedAstar(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, float epsilon, bool append_to_path) {
+
+		// Check
+		std::cout << "In Weighted A*" << std::endl;
+
+		// Create open and closed lists
+		std::vector<AStarPlannerNode> openSet;
+		std::vector<AStarPlannerNode> closedSet;
 
 		// Add the starting node to the open set.
+		double start_g = 0;
 		double start_h = calcEuclidianDistance(start, goal);
 		//double start_h = calcManhattanDistance(start, goal);
-		SteerLib::AStarPlannerNode* startNode = new AStarPlannerNode(start, 0.0, start_h , NULL);
-		openSet.push_back(*startNode);
+		double start_f = start_g + start_h*epsilon;
 
-		printSet(openSet);
+		AStarPlannerNode* startNode = new AStarPlannerNode(start, start_g, start_f, NULL);
+		openSet.push_back(*startNode);
 
 		while (!openSet.empty()) {
 
-			// Search for the node in the open set with the lowest f-value and remove from the open set.
-			SteerLib::AStarPlannerNode minNode = getNodeWithLowest_f(openSet);
+			// Get the node in the open set with the lowest f-value.
+			AStarPlannerNode minNode = getNodeWithLowest_f(openSet);
+			std::cout << "The lowest f value is for the node with position" << minNode.point << "and f value" << minNode.f << std::endl;
 
-			for (std::vector<SteerLib::AStarPlannerNode>::iterator i; i != openSet.end(); i++) {
+			// Delete this node from the open set and add it to the closed set.
+			closedSet.push_back(minNode);
+
+			for (std::vector<AStarPlannerNode>::iterator i = openSet.begin(); i != openSet.end(); ++i) {
 
 				int min_index = gSpatialDatabase->getCellIndexFromLocation(minNode.point);
 				int curr_index = gSpatialDatabase->getCellIndexFromLocation(i->point);
 
 				if (min_index == curr_index) {
-					// Found the node to delete in the open set.
-					openSet.erase(i);
-				}
-			}
 
-			printSet(openSet);
+					// Found the node to delete.
+					openSet.erase(i);
+					break;
+
+				}
+
+			}
 
 			// Generate the list of successor indices.
 			std::vector<int> successors = getSuccessors(minNode);
 
-			// For each successor
 			for (std::vector<int>::iterator i = successors.begin(); i != successors.end(); i++) {
 
 				int successor_index = *i;
-				Util::Point successor_pos;
+				Point successor_pos;
 				gSpatialDatabase->getLocationFromIndex(*i, successor_pos);
 
 				// Check to see if have reached the goal.
 				if (successor_pos.operator==(goal)) {
 
-					reconstructPath(agent_path, *startNode, minNode, goal);
+					std::cout << "GOAL FOUND" << std::endl;
 					return true;
 
 				}
 
-				// Compute the f, g, and h values
-
-				// If Euclidean Distance:
-				double new_g = minNode.g + calcEuclidianDistance(minNode.point, successor_pos);
-				double new_h = calcEuclidianDistance(successor_pos, goal);
-				double new_f = new_g + new_h; // For weighted A*, would calculate new f with given epsilon.
-				
-				// If Manhattan Distance: Implement below.
-				//double new_g = minNode.g + calcManhattanDistance(minNode.point, successor_pos);
-				//double new_h = calcManhattanDistance(successor_pos, goal);
-				//double new_f = new_g + new_h; // For weighted A*, would calculate new f with given epsilon.
-				
-				// Check to see if the successor is in the openSet or closedSet.
-
+				// Check to see if the successor is in the closed set.
 				bool isInClosedSet = false;
 
-				for (std::vector<SteerLib::AStarPlannerNode>::iterator j = closedSet.begin(); j != closedSet.end(); j++) {
+				for (std::vector<AStarPlannerNode>::iterator j = closedSet.begin(); j != closedSet.end(); j++){
+					
+					int closed_index = gSpatialDatabase->getCellIndexFromLocation(j->point);
 
-					if (successor_pos.operator==(j->point)) {
+					if (successor_index == closed_index) {
 
 						isInClosedSet = true;
 						break;
 
 					}
 
-
 				}
 
 				if (isInClosedSet) {
-					break;
+					continue;
 				}
 
-				bool inOpenSet = false;
-
-
-				// Compare f values if the node is already in the open set.
+				// Check if the successor is already in the open set or not.
+				bool isInOpenSet = false;
+				AStarPlannerNode* successorNode;
+				
 				for (std::vector<SteerLib::AStarPlannerNode>::iterator j = openSet.begin(); j != openSet.end(); j++) {
 
-					inOpenSet = true;
+					int open_index = gSpatialDatabase->getCellIndexFromLocation(j->point);
 
-					if (successor_index == gSpatialDatabase->getCellIndexFromLocation(j->point)) {
+					if (successor_index == open_index) {
 
-						// The successor is already in the open set. Compare f values.
-						if (new_f < j->f ) {
+						isInOpenSet = true;
+						successorNode = &(*j);
+						break;
 
-							// Need to update the node's info.
-							j->f = new_f;
-							j->g = new_g;
-							j->parent = &minNode;
-							break;
-						
-						}
-						else if (new_f == j->f) {
+					}
 
-							if (new_g < j->g) {
+				}
 
-								// Update the node's info if the newly computed g value is lower than the old g value.
-								j->f = new_f;
-								j->g = new_g;
-								j->parent = &minNode;
+				// Calculate the new f, g, and h values.
+				double new_g = calculate_g(minNode.point, successor_pos);
+				double new_h = calcEuclidianDistance(successor_pos, goal);
+				//double new_h = calcManhattanDistance(successor_pos, goal);
+				double new_f = new_g + new_h * epsilon;
 
-							}
 
-							break;
+				if (isInOpenSet) {
+
+					// Compare the f-values and update if necessary.
+					if (successorNode->f == new_f) {
+
+						// Compare the g values and update if necessary.
+						if (new_g < successorNode->g) {
+
+							successorNode->f = new_f;
+							successorNode->g = new_g;
+							successorNode->parent = &minNode;
+							continue;
 
 						}
 
 					}
+					else if (successorNode->f > new_f) {
 
+						successorNode->f = new_f;
+						successorNode->g = new_g;
+						successorNode->parent = &minNode;
+						break;
 
+					}
 				}
+				else {
 
-				if (!inOpenSet) {
-
-					// The successor was neither in the open or closed lists. Add to the open list with the computed values.
-					SteerLib::AStarPlannerNode* node = new AStarPlannerNode(successor_pos, new_g, new_f, &minNode);
+					// Must add the successor to the open set.
+					AStarPlannerNode* node = new AStarPlannerNode(successor_pos, new_g, new_f, &minNode);
 					openSet.push_back(*node);
 				}
 
-
 			}
 
-			closedSet.push_back(minNode);
-
+			printSet(openSet);
+			break;
 
 		}
 
-
-
 		return false;
 	}
+
 
 	/*
 		Given the open set of nodes, returns the node with the lowest f-value to be used in the path planning algorithm.
@@ -243,7 +259,7 @@ namespace SteerLib
 	}
 
 	/*
-		Given a node as a predecessor, returns all valid successors of the node such that the nodes are traversable.
+		Given a node as a predecessor, returns all valid successor indices of the node such that the successor nodes are traversable.
 	*/
 
 	std::vector<int> AStarPlanner::getSuccessors(SteerLib::AStarPlannerNode predecessor) {
@@ -270,12 +286,10 @@ namespace SteerLib
 
 		for (std::vector<Util::Point>::iterator i = neighbors.begin(); i != neighbors.end(); i++) {
 
-			// Check if the given cell is valid.
+			// Check if the given cell is valid. If so, add index to list of successors.
 			int index = gSpatialDatabase->getCellIndexFromLocation(*i);
 			if (canBeTraversed(index)) {
 
-				// The neighboring cell with the given index is traversable.
-				// Add the index to the list of successors.
 				successors.push_back(index);
 
 			}
@@ -326,6 +340,8 @@ namespace SteerLib
 	*/
 	void AStarPlanner::printSet(std::vector<SteerLib::AStarPlannerNode> set) {
 
+		std::cout << "The points in the open set are:" << std::endl;
+
 		for (std::vector<SteerLib::AStarPlannerNode>::iterator i = set.begin(); i != set.end(); i++) {
 
 			std::cout << i->point << std::endl;
@@ -351,6 +367,28 @@ namespace SteerLib
 
 		return abs(p1.x - p2.x) + abs(p1.z - p2.z);
 
+	}
+
+	/*
+		Calculate g value of the current position using the previous position.
+	*/
+	double AStarPlanner::calculate_g(Util::Point prevPos, Util::Point newPos) {
+
+		double change_x = abs(newPos.x - prevPos.x);
+		double change_z = abs(newPos.z - prevPos.z);
+
+		if (change_x != 0 && change_z == 0) {
+
+			return change_x;
+
+		}
+		else if (change_x == 0 && change_z != 0) {
+
+			return change_z;
+
+		}
+
+		return sqrt(pow(change_x, 2) + pow(change_z, 2));
 	}
 
 }
