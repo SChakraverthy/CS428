@@ -100,12 +100,14 @@ namespace SteerLib
 		bool goalIsExpanded = false;
 		
 		// Debug statement to count number of expansions.
-		int count = 0;
+		//int count = 0;
 
 		while (!goalIsExpanded) {
 
 			// Get the node with the lowest f-value from the open set. Add to the closed set, remove from open set.
 			AStarPlannerNode minNode = getNodeWithLowest_f(openSet);
+			AStarPlannerNode* minNodeCopy = new AStarPlannerNode(minNode.point, minNode.g, minNode.f, minNode.parent);
+
 			closedSet.push_back(minNode);
 
 			for (std::vector<AStarPlannerNode>::iterator i = openSet.begin(); i != openSet.end(); i++){
@@ -120,8 +122,17 @@ namespace SteerLib
 			}
 
 			// Debug statements.
-			std::cout << count << ".: The minNode has point: " << minNode.point << "and f-value: " << minNode.f << std::endl;
-			count++;
+			//std::cout << count << ".: The minNode has point: " << minNode.point << "and f-value: " << minNode.f << std::endl;
+			//count++;
+
+			if (minNode.parent != NULL) {
+
+				AStarPlannerNode* minParent = minNode.parent;
+				std::cout << "The minNode parent has point: " << minParent->point << "and f-value: " << minParent->f << std::endl;
+
+			}
+
+
 
 			// Check if the node to be expanded is the goal. If so, then calculate path to it from start.
 			if (goal.operator==(minNode.point)) {
@@ -132,9 +143,10 @@ namespace SteerLib
 				// Debug statements
 				std::cout << std::endl;
 				std::cout << "FOUND GOAL" << std::endl;
-				std::cout << "The goal point is: " << minNode.point << std::endl;
+				//std::cout << "The goal point is: " << minNode.point << std::endl;
+
 				
-				//reconstructPath(agent_path, goal, minNode);
+				reconstructPath(agent_path, goal, minNode);
 
 				return true;
 			}
@@ -188,12 +200,12 @@ namespace SteerLib
 
 						nodeInOpen->f = new_f;
 						nodeInOpen->g = new_g;
-						nodeInOpen->parent = &minNode;
+						nodeInOpen->parent = minNodeCopy;
 						continue;
 					}
 					else {
 
-						AStarPlannerNode* successorNode = new AStarPlannerNode(*i, new_g, new_f, &minNode);
+						AStarPlannerNode* successorNode = new AStarPlannerNode(*i, new_g, new_f, minNodeCopy);
 						openSet.push_back(*successorNode);
 						continue;
 					}
