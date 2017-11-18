@@ -99,12 +99,14 @@ namespace SteerLib
 
 			// My definitions
 			bool computePathWeightedAstar(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, double epsilon, bool append_to_path = false);
+			//bool computePathARAstar(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, double epsilon, bool append_to_path = false);
 			AStarPlannerNode getNodeWithLowest_f(std::vector<AStarPlannerNode> openSet);
 			std::vector<Util::Point> getSuccessors(AStarPlannerNode predecessor);
 			double calcEuclidianDistance(Util::Point p1, Util::Point p2);
 			double calcManhattanDistance(Util::Point p1, Util::Point p2);
 			double calculate_g(Util::Point p1, Util::Point p2);
 			void reconstructPath(std::vector<Util::Point>& agent_path, Util::Point goal, AStarPlannerNode goalNode);
+			AStarPlannerNode* isInSet(Util::Point pos, std::vector<AStarPlannerNode> set);
 
 
 
