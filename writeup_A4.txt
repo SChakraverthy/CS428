@@ -1,0 +1,16 @@
+It appears that when Epsilon is weighted higher, it requires less resources, as it looks at less nodes on its way to the goal. However, it ultimately causes there to be a higher cost to the goal and have more nodes in its path. 
+
+Using a higher epsilon would come down to what is preferred for a specific task: get something done quickly without regard to optimal cost, or get optimal cost at expense of running a longer simulation.
+
+In video games, AD* would probably be used in a fog of war game. By that, a game like Civilization, where the area surrounding a player is invisible and covered in fog, but as the player approaches, the fog clears up and may or may not open up a new area for the player to traverse. 
+
+ARA might be good for generally giving enemy AI a route to reach the player when advancing to a certain goal. Rather than wait until some vicinity is reached by the player in an FPS or so, who may be moving quickly to an objective, the enemy can get to some close location, even if it isn't ideal, within some timeframe, faster than it would be otherwise. Plus, the map usually won't change dynamically unless pre-scripted, at which point the enemy would most likely be instantly killed anyway with a change of map or cutscene. 
+
+
+Links to videos: 
+
+A* Epsilon 1:
+https://www.youtube.com/watch?v=YpK09E574_M&feature=youtu.be
+
+A* Epsilon 5:
+https://www.youtube.com/watch?v=6l55aX6pv-8&feature=youtu.be
