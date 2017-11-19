@@ -13,6 +13,7 @@
 #include <functional>
 #include <queue>
 #include <math.h>
+#include <chrono>
 #include "planning/AStarPlanner.h"
 
 
@@ -80,12 +81,14 @@ namespace SteerLib
 		double epsilon = 1;
 
 		// Uncomment a single line below to run the given algorithm.
-		//return computePathWeightedAstar(agent_path, start, goal, epsilon, append_to_path);
-		return computePathARAstar(agent_path, start, goal, epsilon, append_to_path);
+		return computePathWeightedAstar(agent_path, start, goal, epsilon, append_to_path);
+		//return computePathARAstar(agent_path, start, goal, epsilon, append_to_path);
 	}
 
 	/* Weighted A*/
 	bool AStarPlanner::computePathWeightedAstar(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, double epsilon, bool append_to_path) {
+
+		auto begin = std::chrono::high_resolution_clock::now();
 
 		// Create the open and closed sets.
 		std::vector<AStarPlannerNode> openSet;
@@ -102,6 +105,7 @@ namespace SteerLib
 
 		// Setup for the loop
 		bool goalIsExpanded = false;
+		int expandedCount = 0;
 		
 		// Debug statement to count number of expansions.
 		//int count = 0;
@@ -132,7 +136,7 @@ namespace SteerLib
 			if (minNode.parent != NULL) {
 
 				AStarPlannerNode* minParent = minNode.parent;
-				std::cout << "The minNode parent has point: " << minParent->point << "and f-value: " << minParent->f << std::endl;
+				//std::cout << "The minNode parent has point: " << minParent->point << "and f-value: " << minParent->f << std::endl;
 
 			}
 
@@ -144,10 +148,16 @@ namespace SteerLib
 				// Expanding the goal.
 				goalIsExpanded = true;
 
-				// Debug statements
+				auto end = std::chrono::high_resolution_clock::now();
+				auto dur = end - begin;
+				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+
 				std::cout << std::endl;
-				std::cout << "FOUND GOAL" << std::endl;
-				//std::cout << "The goal point is: " << minNode.point << std::endl;
+
+				std::cout << '\n';
+				/*std::cout << "The goal point is: " << minNode.point << std::endl;*/
+				std::cout << "Time to reach goal (in milliseconds): " << ms << std::endl;
+				std::cout << "Total nodes looked at: " << expandedCount << std::endl;
 
 				
 				reconstructPath(agent_path, goal, minNode);
@@ -282,7 +292,6 @@ else {
 			// Check to see if the node expanded is the goal. This solution is the current optimal solution.
 			if (goal.operator==(minNode.point)) {
 
-				std::cout << "FOUND THE GOAL" << std::endl;
 				reconstructPath(agent_path, goal, minNode);
 				return true;
 
@@ -517,6 +526,9 @@ else {
 		backwardsPath.push_back(goalNode.point);
 		AStarPlannerNode* currNode = goalNode.parent;
 
+		std::cout << "Total cost to goal: " << goalNode.f << std::endl;
+		int nodeCount = 0;
+
 		while (currNode != NULL) {
 
 			backwardsPath.push_back(currNode->point);
@@ -528,8 +540,11 @@ else {
 		for (std::vector<Util::Point>::reverse_iterator i = backwardsPath.rbegin(); i != backwardsPath.rend(); ++i) {
 
 			agent_path.push_back(*i);
+			nodeCount++;
 
 		}
+
+		std::cout << "Total nodes in path: " << nodeCount << std::endl;
 
 		return;
 
