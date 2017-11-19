@@ -75,9 +75,13 @@ namespace SteerLib
 
 		//TODO
 		std::cout << "\nIn A*";
-		double epsilon = 1;
-		return computePathWeightedAstar(agent_path, start, goal, epsilon, append_to_path);
 
+		// Set epsilon here.
+		double epsilon = 1;
+
+		// Uncomment a single line below to run the given algorithm.
+		//return computePathWeightedAstar(agent_path, start, goal, epsilon, append_to_path);
+		return computePathARAstar(agent_path, start, goal, epsilon, append_to_path);
 	}
 
 	/* Weighted A*/
@@ -156,67 +160,67 @@ namespace SteerLib
 
 			for (std::vector<Util::Point>::iterator i = successors.begin(); i != successors.end(); i++) {
 
-				bool alreadyVisited = false;
-				double old_f = DBL_MAX;
-				double old_g = DBL_MAX;
-				AStarPlannerNode* nodeInOpen = isInSet(*i, openSet);
-				AStarPlannerNode* nodeInClosed = isInSet(*i, closedSet);
+bool alreadyVisited = false;
+double old_f = DBL_MAX;
+double old_g = DBL_MAX;
+AStarPlannerNode* nodeInOpen = isInSet(*i, openSet);
+AStarPlannerNode* nodeInClosed = isInSet(*i, closedSet);
 
-				// Ignore successor if in closed set.
-				if (nodeInClosed != NULL) {
+// Ignore successor if in closed set.
+if (nodeInClosed != NULL) {
 
-					// Node in closed set.
-					continue;
+	// Node in closed set.
+	continue;
 
-				} 
-				
-				// Check if the successor is in open set already. If so, update old f, g values.
-				if (nodeInOpen != NULL) {
+}
 
-					// Already in open.
-					alreadyVisited = true;
-					old_f = nodeInOpen->f;
-					old_g = nodeInOpen->g;
+// Check if the successor is in open set already. If so, update old f, g values.
+if (nodeInOpen != NULL) {
 
-				}
+	// Already in open.
+	alreadyVisited = true;
+	old_f = nodeInOpen->f;
+	old_g = nodeInOpen->g;
 
-				// Calculate new values.
-				double new_g = minNode.g + calculate_g(minNode.point, *i);
-				double new_h = calcEuclidianDistance(*i, goal);
-				//double new_h = calcManhattanDistance(*i, goal);
-				double new_f = new_g + (epsilon * new_h);
+}
 
-				// Compare values and skip/update/add node as necessary.
-				if (new_f <= old_f) {
+// Calculate new values.
+double new_g = minNode.g + calculate_g(minNode.point, *i);
+double new_h = calcEuclidianDistance(*i, goal);
+//double new_h = calcManhattanDistance(*i, goal);
+double new_f = new_g + (epsilon * new_h);
 
-					if ((new_f == old_f) && (new_g > old_g)) {
+// Compare values and skip/update/add node as necessary.
+if (new_f <= old_f) {
 
-						// Skip successor.
-						continue;
+	if ((new_f == old_f) && (new_g > old_g)) {
 
-					}
+		// Skip successor.
+		continue;
 
-					if (alreadyVisited) {
+	}
 
-						nodeInOpen->f = new_f;
-						nodeInOpen->g = new_g;
-						nodeInOpen->parent = minNodeCopy;
-						continue;
-					}
-					else {
+	if (alreadyVisited) {
 
-						AStarPlannerNode* successorNode = new AStarPlannerNode(*i, new_g, new_f, minNodeCopy);
-						openSet.push_back(*successorNode);
-						continue;
-					}
+		nodeInOpen->f = new_f;
+		nodeInOpen->g = new_g;
+		nodeInOpen->parent = minNodeCopy;
+		continue;
+	}
+	else {
+
+		AStarPlannerNode* successorNode = new AStarPlannerNode(*i, new_g, new_f, minNodeCopy);
+		openSet.push_back(*successorNode);
+		continue;
+	}
 
 
-				}
-				else {
+}
+else {
 
-					continue;
+	continue;
 
-				}
+}
 
 			}
 
@@ -227,7 +231,195 @@ namespace SteerLib
 
 		return false;
 	}
-	
+
+	/* ARA* */
+	bool AStarPlanner::computePathARAstar(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, double epsilon, bool append_to_path) {
+
+		// Create the open, closed, and inconsistent sets.
+		std::vector<AStarPlannerNode> openSet;
+		std::vector<AStarPlannerNode> closedSet;
+		std::vector<AStarPlannerNode> inconSet;
+
+		// Add the start node to the open set.
+		double start_g = 0;
+		double start_h = calcEuclidianDistance(start, goal);
+		//double start_h = calcManhattanDistance(start, goal);
+		double start_f = epsilon * start_h;
+
+		AStarPlannerNode* startNode = new AStarPlannerNode(start, start_g, start_f, NULL);
+		openSet.push_back(*startNode);
+
+		// Initialize the goal f_value.
+		double goal_f = DBL_MAX;
+
+		// Calculate the current path for the given epsilon.
+
+		// The initial minNode is the start node.
+		AStarPlannerNode minNode = *startNode;
+		AStarPlannerNode* minNodeCopy = new AStarPlannerNode(minNode.point, minNode.g, minNode.f, minNode.parent);
+		
+		while (goal_f > minNode.f) {
+
+			// Debug Statement.
+			//std::cout << "The minNode has point: " << minNode.point << " and f-value: " << minNode.f << std::endl;
+
+			// Delete the minNode from the open set.
+
+			for (std::vector<AStarPlannerNode>::iterator i = openSet.begin(); i != openSet.end(); i++){
+
+				if (minNode.operator==(*i)) {
+
+					openSet.erase(i);
+					break;
+
+				}
+
+			}
+
+			// Add the minNode to the closed set.
+			closedSet.push_back(minNode);
+
+			// Check to see if the node expanded is the goal. This solution is the current optimal solution.
+			if (goal.operator==(minNode.point)) {
+
+				std::cout << "FOUND THE GOAL" << std::endl;
+				reconstructPath(agent_path, goal, minNode);
+				return true;
+
+			}
+
+
+			// Get the successors of the minNode.
+			std::vector<Util::Point> successors = getSuccessors(minNode);
+
+			for (std::vector<Util::Point>::iterator i = successors.begin(); i != successors.end(); i++) {
+
+				double old_g = DBL_MAX;
+				double old_f = DBL_MAX;
+
+				bool alreadyVisited = false;
+				bool updateValues = false;
+
+				// Check if the node was visited before.
+				AStarPlannerNode* nodeInOpen = isInSet(*i, openSet);
+				AStarPlannerNode* nodeInClosed = isInSet(*i, closedSet);
+				AStarPlannerNode* nodeInIncon = isInSet(*i, inconSet);
+				AStarPlannerNode* node = NULL;
+
+				if (nodeInClosed != NULL) {
+
+					alreadyVisited = true;
+					node = nodeInClosed;
+
+				}
+
+				if (nodeInOpen != NULL) {
+
+					alreadyVisited = true;
+					old_g = nodeInOpen->g;
+					old_f = nodeInOpen->f;
+					node = nodeInOpen;
+
+				}
+
+				if (nodeInIncon != NULL) {
+
+
+					alreadyVisited = true;
+					old_g = nodeInIncon->g;
+					old_f = nodeInIncon->f;
+					node = nodeInClosed;
+				}
+
+				//std::cout << "MADE IT HERE" << std::endl;
+
+				// Calculate new values
+				double new_g = minNode.g + calculate_g(minNode.point, goal);
+				double new_h = calcEuclidianDistance(*i, goal);
+				//double new_h = calcManhattanDistance(*i, goal);
+				double new_f = new_g + (epsilon * new_h);
+
+				// Compare values to see if they need to be updated.
+				if (new_f <= old_f) {
+
+					if ((new_f == old_f) && (new_g > old_g)) {
+
+						updateValues = false;
+
+					}
+					else {
+
+						updateValues = true;
+
+					}
+
+
+				}
+
+				// Only update or create a node for the successor if it's not already in closed.
+				AStarPlannerNode* successorNode = NULL;
+				if (!nodeInClosed) {
+
+					if (alreadyVisited) {
+
+						if (updateValues) {
+
+							node->f = new_f;
+							node->g = new_g;
+							node->parent = minNodeCopy;
+						}
+
+						successorNode = node;
+
+
+					}
+					else {
+
+						successorNode = new AStarPlannerNode(*i, new_g, new_f, minNodeCopy);
+
+					}
+
+
+
+				}
+				else {
+
+					successorNode = node;
+
+				}
+
+				// Only add to open or inconsistent sets if a node was updated or created.
+				if (updateValues) {
+
+					if (nodeInClosed == NULL) {
+
+						// Insert the successor into the open set.
+						openSet.push_back(*successorNode);
+
+					}
+					else {
+
+						// Insert the successor into the inconsistent set.
+						inconSet.push_back(*node);
+
+					}
+
+
+				}
+
+
+			}
+
+			// Calculate the minNode for the next iteration of the loop.
+			minNode = getNodeWithLowest_f(openSet);
+			minNodeCopy = new AStarPlannerNode(minNode.point, minNode.g, minNode.f, minNode.parent);
+
+		}
+
+
+		return false;
+	}
+
 
 	/* Finds and returns the node with the lowest f-value in the open set*/
 	AStarPlannerNode AStarPlanner::getNodeWithLowest_f(std::vector<AStarPlannerNode> openSet) {
