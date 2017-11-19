@@ -12,6 +12,7 @@
 #include <stack>
 #include <set>
 #include <map>
+#include <chrono>
 #include "SteerLib.h"
 
 namespace SteerLib
