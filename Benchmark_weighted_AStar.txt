@@ -1,0 +1,13 @@
+Weighted A* when epsilon = 1
+
+Time to reach goal (in milliseconds): 282
+Total nodes looked at: 250
+Total cost to goal: 33.3137
+Total nodes in path: 31
+
+Weighted A* when epsilon = 5
+
+Time to reach goal (in milliseconds): 232
+Total nodes looked at: 72
+Total cost to goal: 41.5563
+Total nodes in path: 38
