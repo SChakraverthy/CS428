@@ -1,0 +1,40 @@
+1. In the headers, add 
+
+#include <chrono>
+
+2. Below 	bool AStarPlanner::computePathWeightedAstar(std::vector<Util::Point>& agent_path, Util::Point start, Util::Point goal, double epsilon, bool append_to_path) {, add
+
+		auto begin = std::chrono::high_resolution_clock::now();
+
+3. Below bool goalIsExpanded = false;, add
+
+		int expandedCount = 0;
+
+
+
+4. Below goalIsExpanded = true;, add
+
+				auto end = std::chrono::high_resolution_clock::now();
+				auto dur = end - begin;
+				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+
+				std::cout << std::endl;
+				std::cout << "\nFOUND GOAL" << std::endl;
+
+				std::cout << '\n';
+				//std::cout << "The goal point is: " << minNode.point << std::endl;
+				std::cout << "Time to reach goal (in milliseconds): " << ms << std::endl;
+				std::cout << "Total nodes looked at: " << expandedCount << std::endl;
+
+5. Below AStarPlannerNode* currNode = goalNode.parent;, add
+
+		std::cout << "Total cost to goal: " << goalNode.f << std::endl;
+		int nodeCount = 0;
+
+6. Below agent_path.push_back(*i);, add
+
+			nodeCount++;
+
+7. Then, after the brackets containing nodeCount++, add 
+
+		std::cout << "Total nodes in path: " << nodeCount << std::endl;
